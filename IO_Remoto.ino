@@ -3,24 +3,22 @@
 #include <TimerOne.h>
 #include <Ethernet.h>
 #include "MgsModbus.h"
+#include <EEPROM.h>
 
 
-
-// INICIO: Variaveis usadas na rotina modbus
+// Variaveis usadas na rotina modbus
 MgsModbus Mb;
-// FIM: Variaveis usadas na rotina modbus
 
 
-// INICIO: Variaveis usadas para ethernet
+// Variaveis usadas para ethernet
 uint8_t mac[] = { 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A };
 uint8_t ip[] = { 192, 168, 0, 202 };
 uint8_t subnet[] = { 255, 255, 255, 0 };
 uint8_t gateway[] = { 192, 168, 0, 1 };
 uint8_t dns_server[] = { 192, 168, 0, 1 };
-// FIM: Variaveis usadas para ethernet
 
 
-// INICIO: Variaveis para trigger
+// Variaveis para trigger
 word Trigger_ed;
 word memTrigger_ed;
 word Trigger_edv;
@@ -28,43 +26,39 @@ word memTrigger_edv;
 word Trigger1;
 word Trigger_Trigger1;
 word memTrigger_Trigger1;
-// FIM: Variaveis para trigger
 
 
-// INICIO: Variaveis usadas na rotina de disparo do dimmer
+// Variaveis usadas na rotina de disparo do dimmer
 int dimmer_preset[16];
 int dimmer_atual[16];
 int dimmer_acc;
-//#define dimmer_Scan 417
-#define dimmer_Scan 209
+#define dimmer_Scan 417
+//#define dimmer_Scan 209
 #define dimmer_max round((8333.0/dimmer_Scan)*05/100) // disparo maximo a partir de 10% do inicio da onda
 #define dimmer_min round((8333.0/dimmer_Scan)*85/100) // disparo minimo ate 85% do inicio da onda
-// FIM: Variaveis usadas na rotina de disparo do dimmer
 
 
-// INICIO: Variaveis diversas
+// Variaveis diversas
 word bit_mask1[16] = { 0x0001, 0x0002, 0x0004, 0x0008, 0x0010, 0x0020, 0x0040, 0x0080, 0x0100, 0x0200, 0x0400, 0x0800, 0x1000, 0x2000, 0x4000, 0x8000 };
 word bit_mask2[16] = { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 };
 #define pre_tmr10ms_acc round(10000.0/dimmer_Scan)
 int tmr10ms_acc = pre_tmr10ms_acc; // 24 * 417 = ~10ms   417 vem do Timer1
 bool clock_10ms;
 bool mem;
+word memoria_sd;
 struct dt_timer
 {
-	int preset;
-	int efetivo;
+	unsigned int preset;
+	unsigned int efetivo;
 	bool enable;
 	bool done;
 	bool timing;
 	bool reset;
 };
 dt_timer timer[32];
-// FIM: Variaveis diversas
 
 
 // Atalho para os registros do modbus
-
-// Regiao de leitura
 #define modbus_ed            Mb.MbData[0]   // R
 #define modbus_sd            Mb.MbData[1]   // RW
 #define modbus_edv           Mb.MbData[2]   // W
@@ -92,6 +86,8 @@ dt_timer timer[32];
 #define modbus_cfgNobreak    Mb.MbData[24]   // R
 #define modbus_cfgDimmer     Mb.MbData[25]   // R
 
+
+/////////////////////////////////////////////////// setup()
 void setup()
 {
 	Serial.begin(9600);
@@ -100,7 +96,9 @@ void setup()
   // Configuracao padrao caso nao consiga ler o cartao SD
   modbus_cfgLinkIO = 0xFFFF;
   modbus_cfgDimmer = 0xFF00;
-  modbus_sd = 0x0000;
+  // modbus_sd = 0x0000;
+  modbus_sd = word(EEPROM.read(0), EEPROM.read(1));
+  memoria_sd = modbus_sd;
 
   
 	// Desabilita a ethernet e habilita o cartao SD
@@ -149,167 +147,9 @@ void setup()
 }
 
 
+/////////////////////////////////////////////////// loop()
 void loop()
 {
- switch(modbus_cmdAuxiliar1)
-  {
-    case 1:
-      bitClear(modbus_sd, 0);
-      break;
-    case 2:
-      bitClear(modbus_sd, 1);
-      break;
-    case 3:
-      bitClear(modbus_sd, 2);
-      break;
-    case 4:
-      bitClear(modbus_sd, 3);
-      break;
-    case 5:
-      bitClear(modbus_sd, 4);
-      break;
-    case 6:
-      bitClear(modbus_sd, 5);
-      break;
-    case 7:
-      bitClear(modbus_sd, 6);
-      break;
-    case 8:
-      bitClear(modbus_sd, 7);
-      break;
-    case 9:
-      bitClear(modbus_sd, 8);
-      break;
-    case 10:
-      bitClear(modbus_sd, 9);
-      break;
-    case 11:
-      bitClear(modbus_sd, 10);
-      break;
-    case 12:
-      bitClear(modbus_sd, 11);
-      break;
-    case 13:
-      bitClear(modbus_sd, 12);
-      break;
-    case 14:
-      bitClear(modbus_sd, 13);
-      break;
-    case 15:
-      bitClear(modbus_sd, 14);
-      break;
-    case 16:
-      bitClear(modbus_sd, 15);
-      break;
-
-    case 101:
-      bitSet(modbus_sd, 0);
-      break;
-    case 102:
-      bitSet(modbus_sd, 1);
-      break;
-    case 103:
-      bitSet(modbus_sd, 2);
-      break;
-    case 104:
-      bitSet(modbus_sd, 3);
-      break;
-    case 105:
-      bitSet(modbus_sd, 4);
-      break;
-    case 106:
-      bitSet(modbus_sd, 5);
-      break;
-    case 107:
-      bitSet(modbus_sd, 6);
-      break;
-    case 108:
-      bitSet(modbus_sd, 7);
-      break;
-    case 109:
-      bitSet(modbus_sd, 8);
-      break;
-    case 110:
-      bitSet(modbus_sd, 9);
-      break;
-    case 111:
-      bitSet(modbus_sd, 10);
-      break;
-    case 112:
-      bitSet(modbus_sd, 11);
-      break;
-    case 113:
-      bitSet(modbus_sd, 12);
-      break;
-    case 114:
-      bitSet(modbus_sd, 13);
-      break;
-    case 115:
-      bitSet(modbus_sd, 14);
-      break;
-    case 116:
-      bitSet(modbus_sd, 15);
-      break;
-  }
-    modbus_cmdAuxiliar1 = 0;
-
-// Seta valor do dimmer
- switch(modbus_cmdAuxiliar3)
-  {
-    case 1:
-      modbus_efeDimmerS01 = modbus_cmdAuxiliar4 ;
-      break;
-    case 2:
-      modbus_efeDimmerS02 = modbus_cmdAuxiliar4 ;
-      break;
-    case 3:
-      modbus_efeDimmerS03 = modbus_cmdAuxiliar4 ;
-      break;
-    case 4:
-      modbus_efeDimmerS04 = modbus_cmdAuxiliar4 ;
-      break;
-    case 5:
-      modbus_efeDimmerS05 = modbus_cmdAuxiliar4 ;
-      break;
-    case 6:
-      modbus_efeDimmerS06 = modbus_cmdAuxiliar4 ;
-      break;
-    case 7:
-      modbus_efeDimmerS07 = modbus_cmdAuxiliar4 ;
-      break;
-    case 8:
-      modbus_efeDimmerS08 = modbus_cmdAuxiliar4 ;
-      break;
-    case 9:
-      modbus_efeDimmerS09 = modbus_cmdAuxiliar4 ;
-      break;
-    case 10:
-      modbus_efeDimmerS10 = modbus_cmdAuxiliar4 ;
-      break;
-    case 11:
-      modbus_efeDimmerS11 = modbus_cmdAuxiliar4 ;
-      break;
-    case 12:
-      modbus_efeDimmerS12 = modbus_cmdAuxiliar4 ;
-      break;
-    case 13:
-      modbus_efeDimmerS13 = modbus_cmdAuxiliar4 ;
-      break;
-    case 14:
-      modbus_efeDimmerS14 = modbus_cmdAuxiliar4 ;
-      break;
-    case 15:
-      modbus_efeDimmerS15 = modbus_cmdAuxiliar4 ;
-      break;
-    case 16:
-      modbus_efeDimmerS16 = modbus_cmdAuxiliar4 ;
-      break;
-                        
-  }
-//    modbus_cmdAuxiliar3 = 0;
-//    modbus_cmdAuxiliar4 = 0;
-
-  
   	// Executa comunicacao modbus
 	static int i = 10;
 	if (i == 0)
@@ -359,13 +199,27 @@ void loop()
 			else dimmer_atual[x] = dimmer_min;
 		}
 	}
+
+	// Temporizador 120s
+	timer[1].preset = 12000;
+	timer[1].reset = 0;
+	timer[1].enable = !timer[1].done;
+	if (timer[1].done)
+	{
+		if (modbus_sd != memoria_sd)
+		{
+			EEPROM.update(0, highByte(modbus_sd));
+			EEPROM.update(1, lowByte(modbus_sd));
+			memoria_sd = modbus_sd;
+		}
+	}
+
+
+
 }
 
 
-// ************************************************************************************************
-// ************************************* ROTINAS CONSOLIDADAS *************************************
-// ************************************************************************************************
-
+/////////////////////////////////////////////////// timer_10ms()
 void timer_10ms()
 {
 	for (int i = 31; i >= 0; i--)
@@ -394,6 +248,8 @@ void timer_10ms()
 	}
 }
 
+
+/////////////////////////////////////////////////// int_time()
 void int_timer()
 {
 	//bitWrite(PORTL, 6, 1);
@@ -440,6 +296,8 @@ void int_timer()
 	
 }
 
+
+/////////////////////////////////////////////////// zero_cross_detect()
 void zero_cross_detect()
 {
 	// Inicializa o Timer1
@@ -452,6 +310,8 @@ void zero_cross_detect()
 	}
 }
 
+
+/////////////////////////////////////////////////// LerConfiguracao()
 bool LerConfiguracao()
 {
 	if (!SD.begin(4))
@@ -563,6 +423,8 @@ bool LerConfiguracao()
 	myFile.close();
 }
 
+
+/////////////////////////////////////////////////// Ativacao()
 void Aticavao()
 {
 	for (int i = 15; i >= 0; i--)
@@ -576,6 +438,8 @@ void Aticavao()
 	}
 }
 
+
+/////////////////////////////////////////////////// Trigger()
 void Trigger()
 {
 	// Trigger na ed e edv
@@ -598,6 +462,8 @@ void Trigger()
 	memTrigger_Trigger1 = Trigger1;
 }
 
+
+/////////////////////////////////////////////////// SaidasDigitais()
 void SaidasDigitais(word saidas)
 {
 	// Q1 = PORTL.3
@@ -627,6 +493,8 @@ void SaidasDigitais(word saidas)
 
 }
 
+
+/////////////////////////////////////////////////// EntradasDigitais()
 word EntradasDigitais()
 {
 	// I1 = PORTL.0
@@ -657,7 +525,7 @@ word EntradasDigitais()
 
 	//Filtro 
 	if (ed_SemFiltro == ed_SemFiltroMemorizada) filtro -= 1;
-	else filtro = 100;
+	else filtro = 50;
 	ed_SemFiltroMemorizada = ed_SemFiltro;
 	if (filtro == 0) entradas = ed_SemFiltro;
 	return entradas;
